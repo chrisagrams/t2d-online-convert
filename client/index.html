@@ -103,9 +103,12 @@
             let link = document.createElement("a");
             link.href = url;
             link.download = "result.zip";
-            document.body.appendChild(link);
+            link.innerText = "click here";
+            let text = document.createElement("p");
+            text.innerText = "If your download did not start, ";
+            text.appendChild(link);
             link.click();
-            document.body.removeChild(link);
+            document.querySelector("#dropArea").appendChild(text);
         }).catch((e) => {
             console.log("something went wrong");
             console.log(e.toString());
