@@ -13,8 +13,6 @@
     <p>Drop files here or click browse to select local files to convert.</p>
     <form ref='uploadForm'
           id='uploadForm'
-          action='http://localhost:3000/upload'
-          method='post'
           encType="multipart/form-data">
         <input id="fileInput" type="file" name="file" accept=".t2d" multiple style="display: none">
         <input class="button" id="browseButton" type="button" value="Browse..." onclick="document.querySelector('#fileInput').click();" />
@@ -82,8 +80,9 @@
 
     const upload = () => {
         document.querySelector(".loader").style = "visibility: visible";
+        let hostname = window.location.href;
         formData.forEach((e) => { console.log(e);});
-        fetch("http://localhost:3000/upload", {
+        fetch(hostname + "upload", {
             method: 'POST',
             body: formData
         }).then((response) => {
