@@ -78,9 +78,13 @@ app.post('/upload', (req, res) => {
                 }
             });
 
-            // return res.send('File uploaded');
                 zipExec.on('exit', () => {
                     console.log("|("+ req.connection.remoteAddress +")> " + "Zipping finished. Returning download.");
+                    res.on('finish', (e) => {      //This event handler is triggered once the session is closed meaning the download has been sent out to the client. We can now proceed to delete the files.
+                        console.log("|("+ req.connection.remoteAddress +")> " + "File sent. Starting cleanup...");
+                        fs.rmdirSync(__dirname + '/tmp/' + req.connection.remoteAddress + '/', { recursive: true });
+                        console.log("|("+ req.connection.remoteAddress +")> "+ "Cleanup done. Session closed.")
+                    });
                     return res.download(zipFilename);
                 });
              });
