@@ -17,14 +17,19 @@ body {
     padding-left: 20px;
     padding-right: 20px;
 }
-.button:hover{
+.button:hover {
     background-color: #499cd7;
 }
 
+.button:disabled {
+    background-color: #b2b2b2;
+}
+
 #dropArea {
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
     margin: auto;
     width: 50%;
-    background-color: lightgrey;
+    background-color: #d3d3d394;
     border-radius: 15px;
     padding-top: 10px;
     padding-left: 25px;
@@ -48,18 +53,65 @@ body {
     margin:auto;
     padding: 10px;
 }
+
 input {
     margin-top: 10px;
     margin-bottom: 10px;
 }
 
+#fileList {
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+#fileList p {
+    font-size: 14px;
+}
+
 .hover {
-    box-shadow: 0px 0px 10px #3498db;
+
+    box-shadow: 0px 0px 10px #818181;
+    transform: scale(1.01);
+}
+
+#fileDiv {
+    overflow: hidden;
+    animation: slide-up 0.4s ease;
+}
+
+#clickText {
+    animation: slide-up 0.4s ease;
+}
+
+#resetButton {
+    transition: all 0.6s cubic-bezier(0.165, 0.84, 0.44, 1);
+    float: right;
+}
+#resetButton:hover {
+    transform: scale(1.1);
+}
+
+
+.no-visible {
+    opacity: 0;
+}
+.ani-slide-up {
+    animation: slide-up 0.4s ease;
+}
+.ani-slide-up-slow {
+    animation: slide-up 0.8s ease;
+}
+
+.ani-slide-down {
+    animation: slide-down 0.4s ease;
+}
+
+.ani-slide-down-slow {
+    animation: slide-down 0.8s ease;
 }
 
 /* --- Adopted from w3schools.com --- */
 .loader {
-    visibility: hidden;
+    /*visibility: hidden;*/
     margin: auto;
     border: 6px solid #f3f3f3; /* Light grey */
     border-top: 6px solid #3498db; /* Blue */
@@ -72,4 +124,26 @@ input {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+@keyframes slide-up {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slide-down {
+    0% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
 }

@@ -10,8 +10,7 @@ app.use(express.static(__dirname + '/client/'));
 app.use(file_upload());
 
 app.get('/', (req, res) => {
-    res.sendFile('client/index.html', {root: path.join(__dirname)} , (err) => {
-
+        res.sendFile('client/index.html', {root: path.join(__dirname)} , (err) => {
     });
 });
 
@@ -67,7 +66,7 @@ app.post('/upload', (req, res) => {
         javaExec.on("exit", () => {
             console.log("|("+ req.connection.remoteAddress +")> " + "Conversion finished. Zipping...");
             let zipFilename = 'tmp/' + req.connection.remoteAddress + '/' + Date.now() + req.connection.remoteAddress+'out.zip';
-            let zipExec = exec('zip -r '+ zipFilename +' tmp/' +req.connection.remoteAddress +'/out/', (error, stdout, stderr) => {
+            let zipExec = exec('zip -r -j '+ zipFilename +' tmp/' +req.connection.remoteAddress +'/out/', (error, stdout, stderr) => {
                 if(error) {
                     console.log("|("+ req.connection.remoteAddress +")> " + "error: " + error.message);
                     return res.status(500).send(error);
