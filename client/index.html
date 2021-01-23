@@ -2,19 +2,121 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Title</title>
+    <title>T2D Convert</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
 </head>
 <body>
-<form ref='uploadForm'
-      id='uploadForm'
-      action='http://localhost:3000/upload'
-      method='post'
-      encType="multipart/form-data">
-    <input type="file" name="sampleFile" />
-    <input type='submit' value='Upload!' />
-</form>
+<div id="error">
+    <p>Invalid filetype uploaded. Make sure that your file ends with ".t2d"</p>
+</div>
+<div id="dropArea">
+    <p>Drop files here or click browse to select local files to convert.</p>
+    <form ref='uploadForm'
+          id='uploadForm'
+          action='http://localhost:3000/upload'
+          method='post'
+          encType="multipart/form-data">
+        <input id="fileInput" type="file" name="file" accept=".t2d" multiple style="display: none">
+        <input class="button" id="browseButton" type="button" value="Browse..." onclick="document.querySelector('#fileInput').click();" />
+        <br>
+        <div id="fileList">
+
+        </div>
+        <input class="button" type='button' value='Convert' onclick="upload()">
+        <div class="loader"></div>
+    </form>
+</div>
 </body>
 <script>
+    let formData = new FormData(document.querySelector("#uploadForm"));
 
+    let dropArea = document.querySelector("#dropArea");
+    dropArea.addEventListener('dragenter', (e) => {
+        dropArea.classList.add("hover");
+        e.preventDefault()
+        e.stopPropagation()
+    });
+    dropArea.addEventListener('dragover', (e) => {
+        dropArea.classList.add("hover");
+        e.preventDefault()
+        e.stopPropagation()
+    });
+
+    dropArea.addEventListener('dragleave', (e) => {
+        dropArea.classList.remove("hover");
+        e.preventDefault()
+        e.stopPropagation()
+    });
+
+    dropArea.addEventListener('drop', (e) => {
+        dropArea.classList.remove("hover");
+        e.preventDefault()
+        e.stopPropagation()
+        let dt = e.dataTransfer;
+        let files = dt.files;
+        // console.log(files);
+        for(let i = 0; i<files.length; i++){
+            console.log(files[i]);
+            if(files[i].name.endsWith(".t2d")) {
+                formData.append("file", files[i]);
+                appendFilenameToList(files[i]);
+                document.querySelector("#browseButton").disabled = true;
+            }
+            else { //TODO: Add error popup
+                console.log("invalid file");
+                document.querySelector("#error").style = "display: block;";
+            }
+        }
+
+    });
+    let inputElement = document.querySelector("#fileInput");
+
+    inputElement.onchange = (event) => {
+        formData = new FormData(document.querySelector("#uploadForm"));
+        let fileList = inputElement.files;
+        console.log(fileList);
+        for(let i = 0; i<fileList.length; i++){
+            appendFilenameToList(fileList[i]);
+        }
+    }
+
+    const upload = () => {
+        document.querySelector(".loader").style = "visibility: visible";
+        formData.forEach((e) => { console.log(e);});
+        fetch("http://localhost:3000/upload", {
+            method: 'POST',
+            body: formData
+        }).then((response) => {
+            // if(response.status == 500){
+            //     console.log("Internal Server Error.");
+            // }
+            // else if(response.status == 400) {
+            //     console.log(response.body);
+            // }
+            return response.blob();
+        }).then(blob => {
+            console.log(blob);
+            return URL.createObjectURL(blob);
+        }).then(url => {
+            document.querySelector(".loader").style = "visibility: hidden";
+            console.log("URL:" + url.toString());
+            let link = document.createElement("a");
+            link.href = url;
+            link.download = "result.zip";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }).catch((e) => {
+            console.log("something went wrong");
+            console.log(e.toString());
+        });
+    }
+
+    const appendFilenameToList = (file) => {
+        let fileName = document.createElement("p");
+        fileName.innerText = file.name;
+        console.log(file.name);
+        document.querySelector("#fileList").append(fileName);
+    }
 </script>
 </html>
