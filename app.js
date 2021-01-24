@@ -151,7 +151,7 @@ app.post('/upload', (req, res) => {
                                 `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.txt"`
          */
 
-        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+ '" "tmp/' + remoteAddress +'/out/'+req.files.file.name+'.mzxml"',
+        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+ '" "tmp/' + remoteAddress +'/out/'+ appendExtension(req.files.file.name, req.body.outputRadio)+'"',
             (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
 
         /* javaExec.on - Event Listener
@@ -230,4 +230,14 @@ const stdoutput = (res, req, error, stdout, stderr) => {
         console.log("|("+ req.connection.remoteAddress +")> " + "stderr: " + stderr);
         return res.status(500).send(stderr);
     }
+}
+
+/* appendExtension - Function
+    Description - Remove .t2d from filename and append extension to it
+ */
+
+const appendExtension = (filename, extension) => {
+    let result = filename.slice(0, -4);
+    result = result.concat(extension);
+    return result;
 }

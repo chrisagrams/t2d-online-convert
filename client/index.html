@@ -25,6 +25,13 @@
         <div id="fileList">
 
         </div>
+        <div>
+            <span>Output: </span>
+            <input type="radio" id="mzxml" name="outputRadio" value=".mzxml" checked>
+            <label for="mzxml">.mzxml</label>
+            <input type="radio" id="txt" name="outputRadio" value=".txt">
+            <label for="txt">.txt</label><br>
+        </div>
         <input id="convertButton" disabled = "true" class="button" type='button' value='Convert' onclick="upload()">
         <div id="loaderDiv" class="no-visible">
             <div class="loader"></div>
@@ -110,6 +117,7 @@
         document.querySelector("#convertButton").disabled = true;
         document.querySelector("#loaderDiv").classList.add("ani-slide-up");
         let hostname = window.location.href;
+        checkRadioValue();
         formData.forEach((e) => { console.log(e);});
         fetch(hostname + "upload", {
             method: 'POST',
@@ -196,5 +204,15 @@
         document.querySelector("#convertButton").disabled = true;
 
     }
+
+    const checkRadioValue = () => {
+        let radios = document.getElementsByName("outputRadio");
+        formData.delete('outputRadio');
+        if(radios[0].checked)
+            formData.append('outputRadio', '.mzxml');
+        else
+            formData.append('outputRadio', '.txt');
+    }
+
 </script>
 </html>
