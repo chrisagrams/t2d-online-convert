@@ -117,95 +117,57 @@ app.post('/upload', (req, res) => {
             - Case 1, it is an array: Iterate through the array and convert each file individually in out directory.
             - Case 2, not an array:   Proceed to treat the object as a file and convert the file and zip it.
      */
+    uploadPath = __dirname + '/tmp/' + remoteAddress + "/";
 
     if(Array.isArray(file)) {
-        let counter = 0;
+
         file.forEach( e => {
-            uploadPath = __dirname + '/tmp/' + remoteAddress + "/" + e.name;
-            e.mv(uploadPath, (err) => {
+            e.mv(uploadPath+e.name, (err) => {
                 if(err)
                     return res.status(500).send(err);
             });
-            counter++;
         });
-        return res.send(counter + ' Files uploaded');
-    }
-    else {
-        uploadPath = __dirname + '/tmp/' + remoteAddress  + "/" + req.files.file.name;
 
+        javaConvert(() => {
+            zipper((zipFilename)=> {
+                res.download(zipFilename);
+            }, remoteAddress, res, req);
+        }, uploadPath, remoteAddress, extractNamesFromObjects(file), req.body.outputRadio, res, req);
+
+    }
+
+    else {
         /* file.mv - Function
                 - Goal:   Move file to uploadPath.
                 - Output: If theres an error, print to console and respond with code 500.
          */
 
-        file.mv(uploadPath, (err) => {
-        if(err) {
-            console.log("|("+ remoteAddress +")> " + "error: " + err + "\nTerminating session.");
-            return res.status(500).send(err);
-        }
+        file.mv(uploadPath+req.files.file.name, (err) => {
 
-        /* javaExec - Call to exec
-                - Goal:         Execute `java ConvertPeakList -merge`.
-                - Result:       Will output result in '/tmp/remoteAddress/out/filename.mzxml\txt'.
-                - Sample calls: `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.mzxml"`
-                                `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.txt"`
-         */
+            if(err) {
+                console.log("|("+ remoteAddress +")> " + "error: " + err + "\nTerminating session.");
+                return res.status(500).send(err);
+            }
 
-        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+ '" "tmp/' + remoteAddress +'/out/'+ appendExtension(req.files.file.name, req.body.outputRadio)+'"',
-            (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
-
-        /* javaExec.on - Event Listener
-            - Trigger: Triggered once java exec finishes execution.
-            - Result:  Will zip and send file, then cleanup temporary directory.
-         */
-
-        javaExec.on("exit", () => {
-            console.log("|("+ remoteAddress +")> " + "Conversion finished. Zipping...");
-
-            /* zipExec - Call to exec
-                    - Goal:         Zips the output directory containing resulting .mzxml/.txt files.
-                    - Parameters:   -r (recursive) -j (ignore directory structure)
-                    - Sample call:  "zip -r -j zipFilename tmp/remoteAddress/out/"
-                    - Return value: Sends output to stdoutput() to send correct header response and output to console.
-             */
-
-            let zipFilename = 'tmp/' + remoteAddress + '/' + Date.now() + remoteAddress+'out.zip';
-            let zipExec = exec('zip -r -j '+ zipFilename +' tmp/' + remoteAddress +'/out/',
-                (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
-
-                /* zipExec.on - Event Listener
-                       - Trigger: Triggered once the "zip" program finishes executing.
-                       - Result:  Will setup res.on() and call res.download.
-                 */
-
-                zipExec.on('exit', () => {
-                    console.log("|("+ remoteAddress +")> " + "Zipping finished. Returning download.");
-
-                    /* res.on - Event Listener
-                        - Trigger: This event handler is triggered once the session is closed,
-                                   meaning the download has been sent out to the client.
-                        - Result:  Removes temporary directory named after remoteAddress and
-                                   all files stored within this directory (including the resulting zip).
-                     */
-
-                    res.on('finish', (e) => {
-                        console.log("|("+ remoteAddress +")> " + "File sent. Starting cleanup...");
-                        fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
-                        console.log("|("+ remoteAddress +")> "+ "Cleanup done. Session closed.")
-                    });
-
-                    /* res.download - Function
-                        - Calling: Once zipExec is triggered.
-                        - Result:  Sends the zip file as a response to http request.
-                                   Includes "Content-Disposition: attachment" in
-                                   response headers.
-                     */
-                    return res.download(zipFilename);
-
-                });
-             });
+            javaConvert(() => {
+                zipper((zipFilename)=> {
+                    res.download(zipFilename);
+                }, remoteAddress, res, req);
+             }, uploadPath, remoteAddress, [req.files.file.name], req.body.outputRadio, res, req);
         });
     }
+
+    /* res.on - Event Listener
+        - Trigger: This event handler is triggered once the session is closed,
+                   meaning the download has been sent out to the client.
+        - Result:  Removes temporary directory named after remoteAddress and
+                   all files stored within this directory (including the resulting zip).
+     */
+
+    res.on('finish', () => {
+        cleanup(remoteAddress);
+    });
+
 });
 
 /* app.listen - Function
@@ -239,5 +201,66 @@ const stdoutput = (res, req, error, stdout, stderr) => {
 const appendExtension = (filename, extension) => {
     let result = filename.slice(0, -4);
     result = result.concat(extension);
+    return result;
+}
+
+const javaConvert = (_callback, uploadPath, remoteAddress, filenames, fileExtension, res, req) => {
+    /* javaExec - Call to exec
+              - Goal:         Execute `java ConvertPeakList -merge`.
+              - Result:       Will output result in '/tmp/remoteAddress/out/filename.mzxml\txt'.
+              - Sample calls: `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.mzxml"`
+                              `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.txt"`
+       */
+    filenames.forEach(filename => {
+
+        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+filename + '" "tmp/' + remoteAddress +'/out/'+ appendExtension(filename, fileExtension)+'"',
+            (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
+
+        javaExec.on("exit", () => {
+            console.log("|(" + remoteAddress + ")> " + "Conversion finished.");
+            filenames.shift();
+            if(filenames.length === 0){
+                _callback();
+            }
+        });
+
+    });
+}
+
+const zipper = (_callback, remoteAddress, res,req) => {
+    /* zipExec - Call to exec
+                        - Goal:         Zips the output directory containing resulting .mzxml/.txt files.
+                        - Parameters:   -r (recursive) -j (ignore directory structure)
+                        - Sample call:  "zip -r -j zipFilename tmp/remoteAddress/out/"
+                        - Return value: Sends output to stdoutput() to send correct header response and output to console.
+                 */
+
+    let zipFilename = 'tmp/' + remoteAddress + '/' + Date.now() + remoteAddress+'out.zip';
+
+    let zipExec = exec('zip -r -j '+ zipFilename +' tmp/' + remoteAddress +'/out/',
+        (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
+
+    /* zipExec.on - Event Listener
+           - Trigger: Triggered once the "zip" program finishes executing.
+           - Result:  Will setup res.on() and call res.download.
+     */
+
+    zipExec.on('exit', () => {
+        console.log("|("+ remoteAddress +")> " + "Zipping finished. Returning download.");
+        return _callback(zipFilename);
+    });
+}
+
+const cleanup = (remoteAddress) => {
+    console.log("|("+ remoteAddress +")> " + "File sent. Starting cleanup...");
+    fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
+    console.log("|("+ remoteAddress +")> "+ "Cleanup done. Session closed.")
+}
+
+const extractNamesFromObjects = (files) =>{
+    let result = [];
+    files.forEach(e => {
+        result.push(e.name);
+    });
     return result;
 }
