@@ -6,9 +6,7 @@
     <link rel="stylesheet" type="text/css" href="styles.css" />
 </head>
 <body>
-<div id="error">
-    <p>Invalid filetype uploaded. Make sure that your file ends with ".t2d"</p>
-</div>
+<div id="errorArea"></div>
 <div id="dropArea">
     <p>Drop files here or click browse to select local files to convert.</p>
     <form ref='uploadForm'
@@ -60,7 +58,7 @@
 
     const addHoverClass = (element, events) => {
         events.forEach(e => {
-            element.addEventListener(e, (i) => {
+            element.addEventListener(e, () => {
                 element.classList.add("hover");
             });
         });
@@ -69,7 +67,7 @@
 
     const removeHoverClass = (element, events) => {
         events.forEach(e => {
-            element.addEventListener(e, (i) => {
+            element.addEventListener(e, () => {
                 element.classList.remove("hover");
             });
         });
@@ -79,7 +77,7 @@
     dropArea.addEventListener('drop', (e) => {
         let dt = e.dataTransfer;
         let files = dt.files;
-        // console.log(files);
+
         for(let i = 0; i<files.length; i++){
             console.log(files[i]);
             if(files[i].name.endsWith(".t2d")) {
@@ -91,15 +89,14 @@
                 document.querySelector("#resetButton").classList.add("ani-slide-up-slow");
             }
             else { //TODO: Add error popup
-                console.log("invalid file");
-                document.querySelector("#error").style = "display: block;";
+                showError("Invalid filetype uploaded. Make sure that your file ends with \".t2d\"");
             }
         }
 
     });
     let inputElement = document.querySelector("#fileInput");
 
-    inputElement.onchange = (event) => {
+    inputElement.onchange = () => {
         formData = new FormData(document.querySelector("#uploadForm"));
         let fileList = inputElement.files;
         console.log(fileList);
@@ -113,9 +110,10 @@
     }
 
     const upload = () => {
-        // document.querySelector(".loader").style = "visibility: visible";
+
         document.querySelector("#convertButton").disabled = true;
         document.querySelector("#loaderDiv").classList.add("ani-slide-up");
+
         let hostname = window.location.href;
         checkRadioValue();
         formData.forEach((e) => { console.log(e);});
@@ -123,34 +121,49 @@
             method: 'POST',
             body: formData
         }).then((response) => {
-            // if(response.status == 500){
-            //     console.log("Internal Server Error.");
-            // }
-            // else if(response.status == 400) {
-            //     console.log(response.body);
-            // }
+
+            if(response.status === 400)
+                throw(400);
+            else if(response.status === 500)
+                throw(500);
+
             return response.blob();
         }).then(blob => {
             console.log(blob);
             return URL.createObjectURL(blob);
         }).then(url => {
-            // document.querySelector(".loader").style = "visibility: hidden";
-            document.querySelector("#loaderDiv").classList.add("ani-slide-down");
-            console.log("URL:" + url.toString());
-            let link = document.createElement("a");
+            createDownloadLink(url);
+        }).catch((e) => {
+            if(e === 400){
+                showError("Server responded with code 400: No valid files were uploaded.")
+            }
+            else if(e === 500){
+                showError("Server responded with code 500: Internal Server Error.");
+            }
+            else {
+                console.log(e.toString());
+            }
+        });
+    }
+
+    const createDownloadLink = (url) => {
+        document.querySelector("#loaderDiv").classList.add("ani-slide-down");
+
+        console.log("URL:" + url.toString());
+
+        let link = document.createElement("a");
             link.href = url;
             link.download = "result.zip";
             link.innerText = "click here";
-            let text = document.createElement("p");
+
+        let text = document.createElement("p");
             text.id = "clickText";
             text.innerText = "If your download did not start, ";
             text.appendChild(link);
-            link.click();
-            document.querySelector("#textAppendHere").appendChild(text);
-        }).catch((e) => {
-            console.log("something went wrong");
-            console.log(e.toString());
-        });
+
+        link.click();
+
+        document.querySelector("#textAppendHere").appendChild(text);
     }
 
     const appendFilenameToList = (file) => {
@@ -213,6 +226,21 @@
         else
             formData.append('outputRadio', '.txt');
     }
+
+    const showError = (msg) => {
+        let errorArea = document.querySelector("#errorArea");
+        let errorDiv = document.createElement("div");
+        errorDiv.id = "error";
+        errorDiv.classList.add("pop-down-ani");
+        errorDiv.addEventListener('animationend', () => {
+            errorArea.removeChild(errorDiv);
+        });
+        let p = document.createElement("p");
+        p.innerText = msg;
+        errorDiv.appendChild(p);
+        errorArea.appendChild(errorDiv);
+    }
+
 
 </script>
 </html>

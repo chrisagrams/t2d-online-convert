@@ -38,7 +38,6 @@ body {
 
 }
 #error {
-    display: none;
     position: absolute;
     margin-left: 10%;
     margin-right: 10%;
@@ -146,4 +145,31 @@ input {
         opacity: 0;
         transform: translateY(20px);
     }
+}
+
+.pop-down-ani {
+    animation: pop-down 4s ease;
+}
+
+@keyframes pop-down {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    15% {
+        opacity: 1;
+        transform: translateY(0px);
+    }
+
+    85% {
+        opacity: 1;
+        transform: translateY(0px);
+    }
+
+    100% {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
 }
