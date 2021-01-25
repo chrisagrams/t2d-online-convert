@@ -131,8 +131,8 @@ app.post('/upload', (req, res) => {
         javaConvert(() => {
             zipper((zipFilename)=> {
                 res.download(zipFilename);
-            }, remoteAddress, res, req);
-        }, uploadPath, remoteAddress, extractNamesFromObjects(file), req.body.outputRadio, res, req);
+            }, res, req);
+        }, uploadPath, extractNamesFromObjects(file), res, req);
 
     }
 
@@ -152,16 +152,15 @@ app.post('/upload', (req, res) => {
             javaConvert(() => {
                 zipper((zipFilename)=> {
                     res.download(zipFilename);
-                }, remoteAddress, res, req);
-             }, uploadPath, remoteAddress, [req.files.file.name], req.body.outputRadio, res, req);
+                }, res, req);
+             }, uploadPath, [req.files.file.name], res, req);
         });
     }
 
     /* res.on - Event Listener
         - Trigger: This event handler is triggered once the session is closed,
                    meaning the download has been sent out to the client.
-        - Result:  Removes temporary directory named after remoteAddress and
-                   all files stored within this directory (including the resulting zip).
+        - Result:  Calls cleanup().
      */
 
     res.on('finish', () => {
@@ -171,7 +170,7 @@ app.post('/upload', (req, res) => {
 });
 
 /* app.listen - Function
-    Description - Setup the server to be listening for requests on port 3000.
+    - Description: Setup the server to be listening for requests on port 3000.
  */
 
 app.listen(port, () => {
@@ -179,8 +178,8 @@ app.listen(port, () => {
 });
 
 /* stdoutput - Function
-    Description - Handles all output from exec calls and handles error messages
-                  by printing to console and responding with code 500.
+    - Description: Handles all output from exec calls and handles error messages
+                   by printing to console and responding with code 500.
  */
 
 const stdoutput = (res, req, error, stdout, stderr) => {
@@ -195,7 +194,7 @@ const stdoutput = (res, req, error, stdout, stderr) => {
 }
 
 /* appendExtension - Function
-    Description - Remove .t2d from filename and append extension to it
+    - Description: Remove .t2d from filename and append extension to it.
  */
 
 const appendExtension = (filename, extension) => {
@@ -204,7 +203,11 @@ const appendExtension = (filename, extension) => {
     return result;
 }
 
-const javaConvert = (_callback, uploadPath, remoteAddress, filenames, fileExtension, res, req) => {
+const javaConvert = (_callback, uploadPath, filenames, res, req) => {
+
+    let remoteAddress = req.connection.remoteAddress;
+    let fileExtension = req.body.outputRadio;
+
     /* javaExec - Call to exec
               - Goal:         Execute `java ConvertPeakList -merge`.
               - Result:       Will output result in '/tmp/remoteAddress/out/filename.mzxml\txt'.
@@ -216,6 +219,10 @@ const javaConvert = (_callback, uploadPath, remoteAddress, filenames, fileExtens
         let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+filename + '" "tmp/' + remoteAddress +'/out/'+ appendExtension(filename, fileExtension)+'"',
             (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
 
+        /* javaExec.on("exit") - Event Listener
+                - Trigger: Triggered once current instance of javaExec is finished.
+                - Result:  Will remove filename from queue. If queue is empty, return javaConvert's callback.
+         */
         javaExec.on("exit", () => {
             console.log("|(" + remoteAddress + ")> " + "Conversion finished.");
             filenames.shift();
@@ -227,22 +234,25 @@ const javaConvert = (_callback, uploadPath, remoteAddress, filenames, fileExtens
     });
 }
 
-const zipper = (_callback, remoteAddress, res,req) => {
-    /* zipExec - Call to exec
-                        - Goal:         Zips the output directory containing resulting .mzxml/.txt files.
-                        - Parameters:   -r (recursive) -j (ignore directory structure)
-                        - Sample call:  "zip -r -j zipFilename tmp/remoteAddress/out/"
-                        - Return value: Sends output to stdoutput() to send correct header response and output to console.
-                 */
+const zipper = (_callback, res, req) => {
+
+    let remoteAddress = req.connection.remoteAddress;
 
     let zipFilename = 'tmp/' + remoteAddress + '/' + Date.now() + remoteAddress+'out.zip';
+
+    /* zipExec - Call to exec
+            - Goal:         Zips the output directory containing resulting .mzxml/.txt files.
+            - Parameters:   -r (recursive) -j (ignore directory structure)
+            - Sample call:  "zip -r -j zipFilename tmp/remoteAddress/out/"
+            - Return value: Sends output to stdoutput() to send correct header response and output to console.
+    */
 
     let zipExec = exec('zip -r -j '+ zipFilename +' tmp/' + remoteAddress +'/out/',
         (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
 
     /* zipExec.on - Event Listener
            - Trigger: Triggered once the "zip" program finishes executing.
-           - Result:  Will setup res.on() and call res.download.
+           - Result:  Will return the callback of zipper.
      */
 
     zipExec.on('exit', () => {
@@ -251,11 +261,21 @@ const zipper = (_callback, remoteAddress, res,req) => {
     });
 }
 
+/* cleanup - Function
+       - Description: Removes temporary directory named after remoteAddress and
+                      all files stored within this directory (including the resulting zip).
+ */
+
 const cleanup = (remoteAddress) => {
     console.log("|("+ remoteAddress +")> " + "File sent. Starting cleanup...");
     fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
     console.log("|("+ remoteAddress +")> "+ "Cleanup done. Session closed.")
 }
+
+/* extractNamesFromObjects - Function
+       - Description: Takes an array of file Objects as input and returns
+                      an array of strings containing only the filenames.
+ */
 
 const extractNamesFromObjects = (files) =>{
     let result = [];
