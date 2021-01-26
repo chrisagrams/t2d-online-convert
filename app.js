@@ -69,11 +69,13 @@ app.post('/upload', (req, res) => {
         - file:          Represents the currently selected file.
         - uploadPath:    Represents the destination upload path. (ie: /tmp/remoteAddress/)
         - remoteAddress: Represents the IP address of client making the current request.
+        - timestamp:     Represents the time of the request.
      */
 
     let file;
     let uploadPath;
     let remoteAddress = req.connection.remoteAddress;
+    let timestamp = Date.now();
 
     /* if(!req.files || Object.keys(req.files).length === 0) - Comparison
             - Description:                Initial check to see if client sent files within its request.
@@ -94,9 +96,11 @@ app.post('/upload', (req, res) => {
             - Case 2, directory does not exist: Create the temporary directory for remoteAddress.
      */
 
-    if (!fs.existsSync("./tmp/"+ remoteAddress)){
-        fs.mkdirSync("./tmp/"+ remoteAddress);
-        console.log("|("+ remoteAddress +")> " + "Directory made.");
+    uploadPath = __dirname + '/tmp/' + timestamp + remoteAddress + "/";
+
+    if (!fs.existsSync(uploadPath)){
+        fs.mkdirSync(uploadPath);
+        console.log("|("+ remoteAddress +")> " + "Directory made: " + uploadPath);
     }
 
     file = req.files.file;  /* Select file from request */
@@ -117,7 +121,7 @@ app.post('/upload', (req, res) => {
             - Case 1, it is an array: Iterate through the array and convert each file individually in out directory.
             - Case 2, not an array:   Proceed to treat the object as a file and convert the file and zip it.
      */
-    uploadPath = __dirname + '/tmp/' + remoteAddress + "/";
+
 
     if(Array.isArray(file)) {
 
@@ -131,7 +135,7 @@ app.post('/upload', (req, res) => {
         javaConvert(() => {
             zipper((zipFilename)=> {
                 res.download(zipFilename);
-            }, res, req);
+            }, res, req, uploadPath, timestamp);
         }, uploadPath, extractNamesFromObjects(file), res, req);
 
     }
@@ -152,7 +156,7 @@ app.post('/upload', (req, res) => {
             javaConvert(() => {
                 zipper((zipFilename)=> {
                     res.download(zipFilename);
-                }, res, req);
+                }, res, req, uploadPath, timestamp);
              }, uploadPath, [req.files.file.name], res, req);
         });
     }
@@ -164,7 +168,9 @@ app.post('/upload', (req, res) => {
      */
 
     res.on('finish', () => {
-        cleanup(remoteAddress);
+        console.log("|("+ remoteAddress +")> " + "File sent.");
+        console.log("|("+ remoteAddress +")> "+ "Session closed.")
+        cleanup(remoteAddress, uploadPath);
     });
 
 });
@@ -215,8 +221,8 @@ const javaConvert = (_callback, uploadPath, filenames, res, req) => {
                               `java org.proteomecommons.io.util.ConvertPeakList -merge "AA01_MSMS_1500.0000_1.t2d" "AA.txt"`
        */
     filenames.forEach(filename => {
-
-        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+filename + '" "tmp/' + remoteAddress +'/out/'+ appendExtension(filename, fileExtension)+'"',
+        let finalPath =  uploadPath + 'out/' + appendExtension(filename, fileExtension);
+        let javaExec = exec('java org.proteomecommons.io.util.ConvertPeakList -merge "'+ uploadPath+filename + '" ' + '\"' +finalPath + "\"",
             (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
 
         /* javaExec.on("exit") - Event Listener
@@ -224,7 +230,7 @@ const javaConvert = (_callback, uploadPath, filenames, res, req) => {
                 - Result:  Will remove filename from queue. If queue is empty, return javaConvert's callback.
          */
         javaExec.on("exit", () => {
-            console.log("|(" + remoteAddress + ")> " + "Conversion finished.");
+            console.log("|(" + remoteAddress + ")> " + "Conversion finished: " + finalPath);
             filenames.shift();
             if(filenames.length === 0){
                 _callback();
@@ -234,11 +240,11 @@ const javaConvert = (_callback, uploadPath, filenames, res, req) => {
     });
 }
 
-const zipper = (_callback, res, req) => {
+const zipper = (_callback, res, req, uploadPath, timestamp) => {
 
     let remoteAddress = req.connection.remoteAddress;
 
-    let zipFilename = 'tmp/' + remoteAddress + '/' + Date.now() + remoteAddress+'out.zip';
+    let zipFilename = uploadPath + timestamp + remoteAddress + 'out.zip';
 
     /* zipExec - Call to exec
             - Goal:         Zips the output directory containing resulting .mzxml/.txt files.
@@ -247,7 +253,7 @@ const zipper = (_callback, res, req) => {
             - Return value: Sends output to stdoutput() to send correct header response and output to console.
     */
 
-    let zipExec = exec('zip -r -j '+ zipFilename +' tmp/' + remoteAddress +'/out/',
+    let zipExec = exec('zip -r -j '+ '\"' + zipFilename + '\"' +' ' + '\"' + uploadPath + 'out/' + '\"',
         (error, stdout, stderr) => { return stdoutput(res, req, error, stdout,stderr)});
 
     /* zipExec.on - Event Listener
@@ -256,7 +262,7 @@ const zipper = (_callback, res, req) => {
      */
 
     zipExec.on('exit', () => {
-        console.log("|("+ remoteAddress +")> " + "Zipping finished. Returning download.");
+        console.log("|("+ remoteAddress +")> " + "Zipping finished: " + zipFilename);
         return _callback(zipFilename);
     });
 }
@@ -266,19 +272,17 @@ const zipper = (_callback, res, req) => {
                       all files stored within this directory (including the resulting zip).
  */
 
-const cleanup = (remoteAddress) => {
-    console.log("|("+ remoteAddress +")> " + "File sent. Starting cleanup...");
-    // fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
-    exec('rm -r ' + '\"' +__dirname + '/tmp/' + remoteAddress + '\"', ((error, stdout, stderr) => {
+const cleanup = (remoteAddress, uploadPath) => {
+    exec('rm -r ' + '\"' +uploadPath + '\"', ((error, stdout, stderr) => {
         if(error) {
             console.log(error.message);
         }
         if(stderr) {
             console.log(stderr);
         }
-        console.log(stderr);
+        console.log(stdout);
     }));
-    console.log("|("+ remoteAddress +")> "+ "Cleanup done. Session closed.")
+    console.log("|("+ remoteAddress +")> "+ "Cleanup done: " + uploadPath);
 }
 
 /* extractNamesFromObjects - Function
