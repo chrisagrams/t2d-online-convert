@@ -2,35 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>T2D Convert</title>
+    <title>T2D Converter Online</title>
     <link rel="stylesheet" type="text/css" href="styles.css" />
 </head>
 <body>
 <div id="errorArea"></div>
+<h1 id="title">T2D Converter Online <a href="https://www.pepchem.org/">@ Gao Lab</a></h1>
 <div id="dropArea">
-    <p>Drop files here or click browse to select local files to convert.</p>
+
     <form ref='uploadForm'
           id='uploadForm'
           encType="multipart/form-data">
         <div style="overflow: hidden;">
             <input id="fileInput" type="file" name="file" accept=".t2d" multiple style="display: none">
-            <input class="button" id="browseButton" type="button" value="Browse..." onclick="document.querySelector('#fileInput').click();" style="float: left;"/>
             <div id="resetButton" class="no-visible" onclick="reset()">
                 <svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 0 24 24" width="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
             </div>
         </div>
-            <br>
-        <div id="fileList">
+        <div id="fileListOuter">
+            <div id="fileListInfo">
+                <p style="text-align: center">Drag and Drop .t2d files here</p>
+                <svg style="transform: scale(3.5); width: 100%; margin-top: 20px; margin-bottom: 20px" xmlns="http://www.w3.org/2000/svg" enable-background="new 0 0 24 24" viewBox="0 0 24 24" fill="#818181" width="18px" height="18px"><g><rect fill="none" height="24" width="24"/><path d="M12,4c4.41,0,8,3.59,8,8s-3.59,8-8,8s-8-3.59-8-8S7.59,4,12,4 M12,2C6.48,2,2,6.48,2,12c0,5.52,4.48,10,10,10 c5.52,0,10-4.48,10-10C22,6.48,17.52,2,12,2L12,2z M13,12l0-4h-2l0,4H8l4,4l4-4H13z"/></g></svg>
+            </div>
+            <div id="fileList">
 
+            </div>
         </div>
-        <div>
+        <div style="margin-top: 10px; margin-bottom: 10px;">
+            <p style="float: left; width: fit-content; margin-top: 20px;">Or browse from computer...</p>
+            <input style="margin-left: 20px" class="button" id="browseButton" type="button" value="Browse..." onclick="document.querySelector('#fileInput').click();" style="float: left;"/>
+        </div>
+        <div style="margin-top: 20px; margin-bottom: 20px" >
             <span>Output: </span>
             <input type="radio" id="mzxml" name="outputRadio" value=".mzxml" checked>
             <label for="mzxml">.mzxml</label>
             <input type="radio" id="txt" name="outputRadio" value=".txt">
             <label for="txt">.txt</label><br>
         </div>
-        <input id="convertButton" disabled = "true" class="button" type='button' value='Convert' onclick="upload()">
+        <input id="convertButton" style="width: 100%" disabled = "true" class="button" type='button' value='Convert' onclick="upload()">
         <div id="loaderDiv" class="no-visible">
             <div class="loader"></div>
         </div>
@@ -42,6 +51,7 @@
     let formData = new FormData(document.querySelector("#uploadForm"));
 
     let dropArea = document.querySelector("#dropArea");
+    let fileListArea = document.querySelector("#fileListOuter");
 
     let dragEvents = ['dragenter', 'dragover', 'dragleave', 'drop'];
 
@@ -64,6 +74,7 @@
         });
     }
     addHoverClass(dropArea, ['dragenter', 'dragover']);
+    addHoverClass(fileListArea, ['dragenter', 'dragover']);
 
     const removeHoverClass = (element, events) => {
         events.forEach(e => {
@@ -73,6 +84,7 @@
         });
     }
     removeHoverClass(dropArea, ['dragleave', 'drop']);
+    removeHoverClass(fileListArea, ['dragleave', 'drop']);
 
     dropArea.addEventListener('drop', (e) => {
         let dt = e.dataTransfer;
@@ -92,6 +104,7 @@
                 resetButton.addEventListener('animationend', () =>{
                     resetButton.classList.remove("ani-slide-up-slow");
                 });
+                hideFileListInfo();
             }
             else {
                 showError("Invalid filetype uploaded. Make sure that your file ends with \".t2d\"");
@@ -112,12 +125,15 @@
         document.querySelector("#convertButton").disabled = false;
         document.querySelector("#resetButton").classList.remove("no-visible");
         document.querySelector("#resetButton").classList.add("ani-slide-up-slow");
+        hideFileListInfo();
     }
 
     const upload = () => {
 
         document.querySelector("#convertButton").disabled = true;
+        document.querySelector("#loaderDiv").classList.remove("no-visible");
         document.querySelector("#loaderDiv").classList.add("ani-slide-up");
+        disableRadios();
 
         let hostname = window.location.href;
         checkRadioValue();
@@ -153,6 +169,7 @@
 
     const createDownloadLink = (url) => {
         document.querySelector("#loaderDiv").classList.add("ani-slide-down");
+        document.querySelector("#loaderDiv").classList.add("no-visible");
 
         console.log("URL:" + url.toString());
 
@@ -233,6 +250,10 @@
         document.querySelector("#browseButton").disabled = false;
         document.querySelector("#convertButton").disabled = true;
 
+        showFileListInfo();
+
+        enableRadios();
+
     }
 
     const removeEventListeners = (element) => {
@@ -261,6 +282,38 @@
         p.innerText = msg;
         errorDiv.appendChild(p);
         errorArea.appendChild(errorDiv);
+    }
+
+    const hideFileListInfo = () => {
+        let fileListInfo = document.querySelector("#fileListInfo");
+        fileListInfo.classList.add("ani-slide-down");
+        fileListInfo.addEventListener('animationend', () => {
+            fileListInfo.classList.add("no-visible");
+            fileListInfo.classList.remove("ani-slide-down");
+            removeEventListeners(fileListInfo);
+        });
+    }
+
+    const showFileListInfo = () => {
+        let fileListInfo = document.querySelector("#fileListInfo");
+        fileListInfo.classList.add("ani-slide-up");
+        fileListInfo.classList.remove("no-visible");
+        fileListInfo.addEventListener('animationend', () => {
+            fileListInfo.classList.remove("ani-slide-up");
+            removeEventListeners(fileListInfo);
+        });
+    }
+
+    const disableRadios = () => {
+        let radios = document.getElementsByName("outputRadio");
+        radios[0].disabled = true;
+        radios[1].disabled = true;
+    }
+
+    const enableRadios = () => {
+        let radios = document.getElementsByName("outputRadio");
+        radios[0].disabled = false;
+        radios[1].disabled = false;
     }
 
 
