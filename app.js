@@ -268,7 +268,16 @@ const zipper = (_callback, res, req) => {
 
 const cleanup = (remoteAddress) => {
     console.log("|("+ remoteAddress +")> " + "File sent. Starting cleanup...");
-    fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
+    // fs.rmdirSync(__dirname + '/tmp/' + remoteAddress + '/', { recursive: true });
+    exec('rm -r ' + '\"' +__dirname + '/tmp/' + remoteAddress + '\"', ((error, stdout, stderr) => {
+        if(error) {
+            console.log(error.message);
+        }
+        if(stderr) {
+            console.log(stderr);
+        }
+        console.log(stderr);
+    }));
     console.log("|("+ remoteAddress +")> "+ "Cleanup done. Session closed.")
 }
 
