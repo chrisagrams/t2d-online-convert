@@ -7,7 +7,7 @@ The program can be run by running
 
 `node app.js`
         
-##Requirements
+## Requirements
 
 From your package manager
 
@@ -18,7 +18,7 @@ npm dependencies
 - express
 - express-fileupload
 
-##Notes
+## Notes
 Note that the server runs on port 3000. Due to security reasons, node.js cannot run on lower numbered ports without superuser privileges. It's not a good idea to run this server using sudo. Thus, the outgoing port 80 should be routed to port 3000.
 
 Example iptables routing         
