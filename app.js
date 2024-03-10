@@ -31,15 +31,14 @@
         - port:               Represents the port the server will be utilizing.
  */
 
-const express = require("express");
-const file_upload = require("express-fileupload");
-const path = require('path');
-const fs = require('fs');
-const {exec} = require("child_process");
+import express from "express";
+import file_upload from "express-fileupload";
+import path from 'path';
+import { existsSync, mkdirSync } from 'fs';
+import { exec } from "child_process";
 const app  = express();
 const port = 3000;
 
-app.use(express.static(__dirname + '/client/')); /* See app.get() below */
 app.use(file_upload(undefined));
 
 /* app.get() - Function
@@ -50,10 +49,10 @@ app.use(file_upload(undefined));
                                                       The server will send the resulting files directly to the client and no one else.
 */
 
-app.get('/', (req, res) => {
-        res.sendFile('client/index.html', {root: path.join(__dirname)} , (err) => {
-    });
-});
+// app.get('/', (req, res) => {
+//         res.sendFile('client/index.html', {root: path.join(__dirname)} , (err) => {
+//     });
+// });
 
 /* app.post() - Function
         - Description: The meat of the server. This function responds to form requests made at http://localhost:3000/upload and
@@ -96,10 +95,10 @@ app.post('/upload', (req, res) => {
             - Case 2, directory does not exist: Create the temporary directory for remoteAddress.
      */
 
-    uploadPath = __dirname + '/tmp/' + timestamp + remoteAddress + "/";
+    uploadPath = '/tmp/' + timestamp + remoteAddress + "/";
 
-    if (!fs.existsSync(uploadPath)){
-        fs.mkdirSync(uploadPath);
+    if (!existsSync(uploadPath)){
+        mkdirSync(uploadPath);
         console.log("|("+ remoteAddress +")> " + "Directory made: " + uploadPath);
     }
 
