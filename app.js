@@ -33,7 +33,6 @@
 
 import express from "express";
 import file_upload from "express-fileupload";
-import path from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { exec } from "child_process";
 const app  = express();
@@ -73,7 +72,7 @@ app.post('/upload', (req, res) => {
 
     let file;
     let uploadPath;
-    let remoteAddress = req.connection.remoteAddress;
+    let remoteAddress = req.socket.remoteAddress;
     let timestamp = Date.now();
 
     /* if(!req.files || Object.keys(req.files).length === 0) - Comparison
@@ -189,11 +188,11 @@ app.listen(port, () => {
 
 const stdoutput = (res, req, error, stdout, stderr) => {
     if(error) {
-        console.log("|("+ req.connection.remoteAddress +")> " + "error: " + error.message);
+        console.log("|("+ req.socket.remoteAddress +")> " + "error: " + error.message);
         return res.status(500).send(error);
     }
     if(stderr) {
-        console.log("|("+ req.connection.remoteAddress +")> " + "stderr: " + stderr);
+        console.log("|("+ req.socket.remoteAddress +")> " + "stderr: " + stderr);
         return res.status(500).send(stderr);
     }
 }
@@ -210,7 +209,7 @@ const appendExtension = (filename, extension) => {
 
 const javaConvert = (_callback, uploadPath, filenames, res, req) => {
 
-    let remoteAddress = req.connection.remoteAddress;
+    let remoteAddress = req.socket.remoteAddress;
     let fileExtension = req.body.outputRadio;
 
     /* javaExec - Call to exec
@@ -241,7 +240,7 @@ const javaConvert = (_callback, uploadPath, filenames, res, req) => {
 
 const zipper = (_callback, res, req, uploadPath, timestamp) => {
 
-    let remoteAddress = req.connection.remoteAddress;
+    let remoteAddress = req.socket.remoteAddress;
 
     let zipFilename = uploadPath + timestamp + remoteAddress + 'out.zip';
 
