@@ -121,6 +121,7 @@ const upload = () => {
             showError("Server responded with code 500: Internal Server Error.");
         }
         else {
+            showError("An error occurred. Please try again later.");
             console.log(e.toString());
         }
     });
@@ -213,6 +214,9 @@ const reset = () => {
 
     enableRadios();
 
+    // Hide spinner
+    document.querySelector("#loaderDiv").classList.add("ani-slide-down");
+    document.querySelector("#loaderDiv").classList.add("no-visible");
 }
 
 const removeEventListeners = (element) => {
@@ -241,6 +245,7 @@ const showError = (msg) => {
     p.innerText = msg;
     errorDiv.appendChild(p);
     errorArea.appendChild(errorDiv);
+    reset();
 }
 
 const hideFileListInfo = () => {
