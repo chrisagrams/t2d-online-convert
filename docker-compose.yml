@@ -2,13 +2,14 @@ version: '3.4'
 
 services:
   t2donlineconvert:
-    image: t2donlineconvert
+    image: chrisagrams/t2donlineconvert
     build:
       context: .
       dockerfile: ./Dockerfile
     environment:
       NODE_ENV: production
-  nginx:
+  t2donlineconvert-nginx:
+    image: chrisagrams/t2donlineconvert-nginx
     build:
      context: .
      dockerfile: ./nginx/Dockerfile
